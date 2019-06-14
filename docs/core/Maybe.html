@@ -138,6 +138,9 @@
             <h1>
                 Maybe
             </h1>
+            <div class="module-description">
+                
+            </div>
             <div class="binder">
                 <a class="anchor" href="#=">
                     <h3 id="=">
@@ -338,6 +341,27 @@
                 <p class="doc">
                     <p>checks whether the given value <code>a</code> is a <code>Nothing</code>.</p>
 <p>It is the inverse of <a href="#just?"><code>just?</code></a>.</p>
+
+                </p>
+            </div>
+            <div class="binder">
+                <a class="anchor" href="#or-zero">
+                    <h3 id="or-zero">
+                        or-zero
+                    </h3>
+                </a>
+                <div class="description">
+                    defn
+                </div>
+                <p class="sig">
+                    (λ [(Maybe a)] a)
+                </p>
+                <pre class="args">
+                    (or-zero a)
+                </pre>
+                <p class="doc">
+                    <p>is an unwrapper that will get the value from a <code>Just</code>, or build
+a value using <code>zero</code> if a <code>Nothing</code> is passed.</p>
 
                 </p>
             </div>

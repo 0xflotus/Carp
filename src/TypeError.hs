@@ -41,6 +41,7 @@ data TypeError = SymbolMissingType XObj Env
                | CannotConcretize XObj
                | TooManyAnnotateCalls XObj
                | CannotSet XObj
+               | CannotSetVariableFromLambda XObj XObj
                | DoesNotMatchSignatureAnnotation XObj Ty -- Not used at the moment (but should?)
                | CannotMatch XObj
                | InvalidSumtypeCase XObj
@@ -50,6 +51,7 @@ data TypeError = SymbolMissingType XObj Env
                | UnevenMembers [XObj]
                | InvalidLetBinding [XObj] (XObj, XObj)
                | DuplicateBinding XObj
+               | DefinitionsMustBeAtToplevel XObj
 
 instance Show TypeError where
   show (SymbolMissingType xobj env) =
@@ -196,6 +198,9 @@ instance Show TypeError where
   show (CannotSet xobj) =
     "I can’t `set!` the expression `" ++ pretty xobj ++ "` at " ++
     prettyInfoFromXObj xobj ++ ".\n\nOnly variables can be reset using `set!`."
+  show (CannotSetVariableFromLambda variable xobj) =
+    "I can’t `set!` the variable `" ++ pretty variable ++ "` at " ++
+    prettyInfoFromXObj variable ++ " because it's defined outside the lambda."
   show (DoesNotMatchSignatureAnnotation xobj sigTy) =
     "The definition at " ++ prettyInfoFromXObj xobj ++
     " does not match its annotation provided to `sig` as `" ++ show sigTy ++
@@ -226,6 +231,8 @@ instance Show TypeError where
     prettyInfoFromXObj (head xobjs) ++ ". \n\n Binding names must be symbols."
   show (DuplicateBinding xobj) =
     "I encountered a duplicate binding `" ++ pretty xobj ++ "` inside the `let` at " ++ prettyInfoFromXObj xobj ++ "."
+  show (DefinitionsMustBeAtToplevel xobj) =
+    "I encountered a definition that was not at top level: `" ++ pretty xobj ++ "`"
 
 machineReadableErrorStrings :: FilePathPrintLength -> TypeError -> [String]
 machineReadableErrorStrings fppl err =
@@ -318,6 +325,9 @@ machineReadableErrorStrings fppl err =
 
     (CannotSet xobj) ->
       [machineReadableInfoFromXObj fppl xobj ++ " Can't set! '" ++ pretty xobj ++ "'."]
+    (CannotSetVariableFromLambda variable xobj) ->
+      [machineReadableInfoFromXObj fppl variable ++ " Can't set! '" ++ pretty variable ++ "' from inside of a lambda."]
+
     (CannotConcretize xobj) ->
       [machineReadableInfoFromXObj fppl xobj ++ " Unable to concretize '" ++ pretty xobj ++ "'."]
 
@@ -340,6 +350,8 @@ machineReadableErrorStrings fppl err =
       [machineReadableInfoFromXObj fppl (head xobjs) ++ "Invalid let binding `" ++ pretty sym ++ pretty expr ++ "` at " ++ joinWithComma (map pretty xobjs)]
     (DuplicateBinding xobj) ->
       [machineReadableInfoFromXObj fppl xobj ++ " Duplicate binding `" ++ pretty xobj ++ "` inside `let`."]
+    (DefinitionsMustBeAtToplevel xobj) ->
+      [machineReadableInfoFromXObj fppl xobj ++ " Definition not at top level: `" ++ pretty xobj ++ "`"]
 
     _ ->
       [show err]

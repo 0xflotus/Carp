@@ -582,8 +582,10 @@ commandAppend [xs, ys] =
   case (xs, ys) of
     (XObj (Lst lst1) i t, XObj (Lst lst2) _ _) ->
       return (Right (XObj (Lst (lst1 ++ lst2)) i t)) -- TODO: should they get their own i:s and t:s
+    (XObj (Arr arr1) i t, XObj (Arr arr2) _ _) ->
+      return (Right (XObj (Arr (arr1 ++ arr2)) i t))
     _ ->
-      return (Left (EvalError "Applying 'append' to non-list or empty list." (info xs)))
+      return (Left (EvalError "Applying 'append' to non-array/list or empty list." (info xs)))
 
 commandMacroError :: CommandCallback
 commandMacroError [msg] =
@@ -716,6 +718,14 @@ commandSymJoin [a] =
     _ ->
       Left (EvalError ("Can't call join with " ++ pretty a) (info a))
 
+commandSymPrefix :: CommandCallback
+commandSymPrefix [XObj (Sym (SymPath [] prefix) _) _ _, XObj (Sym (SymPath [] suffix) _) i t] =
+  return $ Right (XObj (Sym (SymPath [prefix] suffix) (LookupGlobal CarpLand AVariable)) i t)
+commandSymPrefix [x, XObj (Sym (SymPath [] _) _) _ _] =
+  return $ Left (EvalError ("Can’t call `prefix` with " ++ pretty x) (info x))
+commandSymPrefix [_, x] =
+  return $ Left (EvalError ("Can’t call `prefix` with " ++ pretty x) (info x))
+
 commandStringDirectory :: CommandCallback
 commandStringDirectory [a] =
   return $ case a of
@@ -809,23 +819,23 @@ commandSaveDocsInternal [modulePath] = do
          case mapM unwrapSymPathXObj xobjs of
            Left err -> return (Left (EvalError err (info modulePath)))
            Right okPaths ->
-             case mapM (getEnvironmentForDocumentation globalEnv) okPaths of
+             case mapM (getEnvironmentBinderForDocumentation globalEnv) okPaths of
                Left err -> return (Left err)
-               Right okEnvs -> saveDocs (zip okPaths okEnvs)
+               Right okEnvBinders -> saveDocs (zip okPaths okEnvBinders)
        x ->
          return (Left (EvalError ("Invalid arg to save-docs-internal (expected list of symbols): " ++ pretty x) (info modulePath)))
-  where getEnvironmentForDocumentation :: Env -> SymPath -> Either (FilePathPrintLength -> EvalError) Env
-        getEnvironmentForDocumentation env path =
+  where getEnvironmentBinderForDocumentation :: Env -> SymPath -> Either (FilePathPrintLength -> EvalError) Binder
+        getEnvironmentBinderForDocumentation env path =
           case lookupInEnv path env of
-            Just (_, Binder _ (XObj (Mod foundEnv) _ _)) ->
-              Right foundEnv
+            Just (_, foundBinder@(Binder _ (XObj (Mod foundEnv) _ _))) ->
+              Right foundBinder
             Just (_, Binder _ x) ->
               Left (EvalError ("I can’t generate documentation for `" ++ pretty x ++ "` because it isn’t a module") (info modulePath))
             Nothing ->
               Left (EvalError ("I can’t find the module `" ++ show path ++ "`") (info modulePath))
 
-saveDocs :: [(SymPath, Env)] -> StateT Context IO (Either a XObj)
-saveDocs pathsAndEnvs =
+saveDocs :: [(SymPath, Binder)] -> StateT Context IO (Either a XObj)
+saveDocs pathsAndEnvBinders =
   do ctx <- get
-     liftIO (saveDocsForEnvs (contextProj ctx) pathsAndEnvs)
+     liftIO (saveDocsForEnvs (contextProj ctx) pathsAndEnvBinders)
      return dynamicNil

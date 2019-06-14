@@ -327,8 +327,22 @@ eval env xobj =
                             case evaledArgs of
                               Right okArgs -> getCommand callback okArgs
                               Left err -> return (Left err)
+
+                       -- | TODO / BUG: The following code is what I want to write, but it breaks the ability to
+                       -- | 'use' modules and have their functions automatically resolve when calling them from
+                       -- | the REPL, like for instance `(use Array) (endo-map ...)`.
+                       -- | Having a catch all at the end that routes everything (even errors) to executeFunctionAsMain
+                       -- | Makes it work but that seems strange. Need to investigate this!
+                       -- Right (XObj (Lst (XObj _ _ _ : _)) _ _) ->
+                       --   executeFunctionAsMain ctx listXObj
+                       -- Right x ->
+                       --   return (makeEvalError ctx Nothing ("Can't evaluate " ++ pretty x) (info x))
+                       -- Left err ->
+                       --   return (Left err)
+
                        _ ->
                          executeFunctionAsMain ctx listXObj
+
 
     evalList _ = error "Can't eval non-list in evalList."
 
@@ -706,9 +720,11 @@ deftypeInternal nameXObj typeName typeVariableXObjs rest =
          env = contextGlobalEnv ctx
          typeEnv = contextTypeEnv ctx
          typeVariables = mapM xobjToTy typeVariableXObjs
-         preExistingModule = case lookupInEnv (SymPath pathStrings typeName) env of
-                               Just (_, Binder _ (XObj (Mod found) _ _)) -> Just found
-                               _ -> Nothing
+         (preExistingModule, existingMeta) =
+           case lookupInEnv (SymPath pathStrings typeName) env of
+             Just (_, Binder existingMeta (XObj (Mod found) _ _)) -> (Just found, existingMeta)
+             Just (_, Binder existingMeta _) -> (Nothing, existingMeta)
+             _ -> (Nothing, emptyMeta)
          (creatorFunction, typeConstructor) =
             if length rest == 1 && isArray (head rest)
             then (moduleForDeftype, Typ)
@@ -724,7 +740,7 @@ deftypeInternal nameXObj typeName typeVariableXObjs rest =
                               XObj (Sym (SymPath pathStrings typeName) Symbol) Nothing Nothing :
                               rest)
                         ) i (Just TypeTy)
-                 ctx' = (ctx { contextGlobalEnv = envInsertAt env (SymPath pathStrings typeModuleName) (Binder emptyMeta typeModuleXObj)
+                 ctx' = (ctx { contextGlobalEnv = envInsertAt env (SymPath pathStrings typeModuleName) (Binder existingMeta typeModuleXObj)
                              , contextTypeEnv = TypeEnv (extendEnv (getTypeEnv typeEnv) typeName typeDefinition)
                              })
              in do ctxWithDeps <- liftIO (foldM (define True) ctx' deps)
@@ -826,23 +842,30 @@ specialCommandDefmodule xobj moduleName innerExpressions =
          lastInput = contextLastInput ctx
          execMode = contextExecMode ctx
          proj = contextProj ctx
+
+         defineIt :: MetaData -> StateT Context IO (Either EvalError XObj)
+         defineIt meta = do let parentEnv = getEnv env pathStrings
+                                innerEnv = Env (Map.fromList []) (Just parentEnv) (Just moduleName) [] ExternalEnv 0
+                                newModule = XObj (Mod innerEnv) (info xobj) (Just ModuleTy)
+                                globalEnvWithModuleAdded = envInsertAt env (SymPath pathStrings moduleName) (Binder meta newModule)
+                                ctx' = Context globalEnvWithModuleAdded typeEnv (pathStrings ++ [moduleName]) proj lastInput execMode
+                            ctxAfterModuleDef <- liftIO $ foldM folder ctx' innerExpressions
+                            put (popModulePath ctxAfterModuleDef)
+                            return dynamicNil
+
      result <- case lookupInEnv (SymPath pathStrings moduleName) env of
                  Just (_, Binder _ (XObj (Mod _) _ _)) ->
                    do let ctx' = Context env typeEnv (pathStrings ++ [moduleName]) proj lastInput execMode -- use { = } syntax instead
                       ctxAfterModuleAdditions <- liftIO $ foldM folder ctx' innerExpressions
                       put (popModulePath ctxAfterModuleAdditions)
                       return dynamicNil -- TODO: propagate errors...
-                 Just _ ->
+                 Just (_, Binder existingMeta (XObj (Lst [(XObj DocStub _ _), _]) _ _)) ->
+                   defineIt existingMeta
+                 Just (_, Binder _ x) ->
                    return (makeEvalError ctx Nothing ("Can't redefine '" ++ moduleName ++ "' as module") (info xobj))
                  Nothing ->
-                   do let parentEnv = getEnv env pathStrings
-                          innerEnv = Env (Map.fromList []) (Just parentEnv) (Just moduleName) [] ExternalEnv 0
-                          newModule = XObj (Mod innerEnv) (info xobj) (Just ModuleTy)
-                          globalEnvWithModuleAdded = envInsertAt env (SymPath pathStrings moduleName) (Binder emptyMeta newModule)
-                          ctx' = Context globalEnvWithModuleAdded typeEnv (pathStrings ++ [moduleName]) proj lastInput execMode -- TODO: also change
-                      ctxAfterModuleDef <- liftIO $ foldM folder ctx' innerExpressions
-                      put (popModulePath ctxAfterModuleDef)
-                      return dynamicNil
+                   defineIt emptyMeta
+
      case result of
        Left err -> return (Left err)
        Right _ -> return dynamicNil
@@ -1002,7 +1025,7 @@ specialCommandMetaSet path key value =
          case path of
            -- | If the path is unqualified, create a binder and set the meta on that one. This enables docstrings before function exists.
            (SymPath [] name) ->
-             setMetaOn ctx (Binder emptyMeta (XObj (Lst [XObj (External Nothing) Nothing Nothing,
+             setMetaOn ctx (Binder emptyMeta (XObj (Lst [XObj DocStub Nothing Nothing,
                                                          XObj (Sym (SymPath pathStrings name) Symbol) Nothing Nothing])
                                               (Just dummyInfo)
                                               (Just (VarTy "a"))))
