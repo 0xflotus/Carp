@@ -56,5 +56,17 @@
 ;;       ;;(Array.delete xs)
 ;;       (Array.aset! r2 0 1000))))
 
-(defn g [xs x]
-  (Array.aset! xs 0 x))
+;; (defn eat [s]
+;;   ())
+
+;; (defn g [xs x]
+;;   (do
+;;     ;;(eat xs)
+;;     (Array.aset! xs 0 x)
+;;     ))
+
+(deftype Q [x String])
+
+(defmodule Q
+  (defn = [a b]
+    (String.= (Q.x a) (Q.x b))))
