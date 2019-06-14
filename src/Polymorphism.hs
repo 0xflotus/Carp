@@ -19,7 +19,7 @@ import Lookup
 nameOfPolymorphicFunction :: TypeEnv -> Env -> Ty -> String -> Maybe SymPath
 nameOfPolymorphicFunction typeEnv env functionType functionName =
   let foundBinders = multiLookupALL functionName env
-  in case filter ((\(Just t') -> areUnifiable functionType t') . ty . binderXObj . snd) foundBinders of
+  in case filter ((\(Just t') -> areUnifiable UnificationIgnoresLifetimes functionType t') . ty . binderXObj . snd) foundBinders of
        [] -> Nothing
        [(_, Binder _ single)] ->
          let Just t' = ty single

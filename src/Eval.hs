@@ -579,7 +579,7 @@ define hidden ctx@(Context globalEnv typeEnv _ proj _ _) annXObj =
          do case Map.lookup "sig" (getMeta adjustedMeta) of
               Just foundSignature ->
                 do let Just sigTy = xobjToTy foundSignature
-                   unless (areUnifiable (forceTy annXObj) sigTy) $
+                   unless (areUnifiable UnificationIgnoresLifetimes (forceTy annXObj) sigTy) $
                      throw $ EvalException (EvalError ("Definition at " ++ prettyInfoFromXObj annXObj ++ " does not match `sig` annotation " ++
                               show sigTy ++ ", actual type is `" ++ show (forceTy annXObj) ++ "`.") Nothing fppl)
               Nothing ->
@@ -588,7 +588,7 @@ define hidden ctx@(Context globalEnv typeEnv _ proj _ _) annXObj =
               putStrLn (toC All (Binder emptyMeta annXObj))
             case previousType of
               Just previousTypeUnwrapped ->
-                unless (areUnifiable (forceTy annXObj) previousTypeUnwrapped) $
+                unless (areUnifiable UnificationIgnoresLifetimes (forceTy annXObj) previousTypeUnwrapped) $
                   do putStrWithColor Blue ("[WARNING] Definition at " ++ prettyInfoFromXObj annXObj ++ " changed type of '" ++ show (getPath annXObj) ++
                                            "' from " ++ show previousTypeUnwrapped ++ " to " ++ show (forceTy annXObj))
                      putStrLnWithColor White "" -- To restore color for sure.
@@ -622,7 +622,7 @@ registerInInterfaceIfNeeded ctx path@(SymPath _ name) definitionSignature =
   let typeEnv = getTypeEnv (contextTypeEnv ctx)
   in case lookupInEnv (SymPath [] name) typeEnv of
        Just (_, Binder _ (XObj (Lst [XObj (Interface interfaceSignature paths) ii it, isym]) i t)) ->
-         if areUnifiable interfaceSignature definitionSignature
+         if areUnifiable UnificationIgnoresLifetimes interfaceSignature definitionSignature
          then let updatedInterface = XObj (Lst [XObj (Interface interfaceSignature (addIfNotPresent path paths)) ii it, isym]) i t
               in  return $ ctx { contextTypeEnv = TypeEnv (extendEnv typeEnv name updatedInterface) }
          else Left ("[INTERFACE ERROR] " ++ show path ++ " : " ++ show definitionSignature ++

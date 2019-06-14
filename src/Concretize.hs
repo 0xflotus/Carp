@@ -251,7 +251,7 @@ concretizeXObj allowAmbiguityRoot typeEnv rootEnv visitedDefinitions root =
                                                  Just i' = i
                                        in  case solve [Constraint theType t' fake1 fake2 fake1 OrdMultiSym] of
                                              Right mappings ->
-                                               let replaced = replaceTyVars mappings t'
+                                               let replaced = replaceTyVars UnificationIgnoresLifetimes mappings t'
                                                    suffixed = suffixTyVars ("_x" ++ show (infoIdentifier i')) replaced -- Make sure it gets unique type variables. TODO: Is there a better way?
                                                    normalSymbol = XObj (Sym singlePath mode) i (Just suffixed)
                                                in visitSymbol allowAmbig env --(trace ("Disambiguated " ++ pretty xobj ++ " at " ++ prettyInfoFromXObj xobj ++ " to " ++ show singlePath ++ " : " ++ show suffixed ++ ", used to be " ++ show t' ++ ", theType = " ++ show theType ++ ", mappings = " ++ show mappings))
@@ -329,11 +329,11 @@ collectCapturedVars root = removeDuplicates (map toGeneralSymbol (visit root))
 
 -- | Do the signatures match?
 matchingSignature :: Ty -> (Ty, SymPath) -> Bool
-matchingSignature tA (tB, _) = areUnifiable tA tB
+matchingSignature tA (tB, _) = areUnifiable UnificationIgnoresLifetimes tA tB
 
 -- | Do the signatures match (tuple arity 3 version)?
 matchingSignature3 :: Ty -> (Ty, SymPath, SymbolMode) -> Bool
-matchingSignature3 tA (tB, _, _) = areUnifiable tA tB
+matchingSignature3 tA (tB, _, _) = areUnifiable UnificationIgnoresLifetimes tA tB
 
 -- | Does the type of an XObj require additional concretization of generic types or some typedefs for function types, etc?
 -- | If so, perform the concretization and append the results to the list of dependencies.
@@ -523,7 +523,7 @@ allFunctionsWithNameAndSignature env functionName functionType =
   filter (predicate . ty . binderXObj . snd) (multiLookupALL functionName env)
   where
     predicate (Just t) = --trace ("areUnifiable? " ++ show functionType ++ " == " ++ show t ++ " " ++ show (areUnifiable functionType t)) $
-                         areUnifiable functionType t
+                         areUnifiable UnificationIgnoresLifetimes functionType t
 
 -- | Find all the dependencies of a polymorphic function with a name and a desired concrete type.
 depsOfPolymorphicFunction :: TypeEnv -> Env -> [SymPath] -> String -> Ty -> [XObj]
@@ -656,16 +656,17 @@ manageMemory typeEnv globalEnv root =
         visitSymbol :: XObj -> State MemState (Either TypeError XObj)
         visitSymbol xobj@(XObj (Sym path mode) _ (Just t)) =
           case t of
-            RefTy r (Just (LifetimeTy deleterValue)) ->
-              do MemState deleters deps <- get
-                 let matchingValues = Set.toList $ Set.filter (\case
-                                                   ProperDeleter { deleterVariable = dv } -> dv == deleterValue
-                                                   FakeDeleter   { deleterVariable = dv } -> dv == deleterValue)
-                                                   deleters
-                 case matchingValues of
-                   [] ->  return (Left (GettingReferenceToUnownedValue xobj))
-                   [_] -> return (Right xobj)
-                   _ -> error "Too many variables with the same name in set."
+            -- RefTy r (Just (LifetimeTy deleterValue)) ->
+            --   do MemState deleters deps <- get
+            --      let matchingValues = Set.toList $ Set.filter (\case
+            --                                        ProperDeleter { deleterVariable = dv } -> dv == deleterValue
+            --                                        FakeDeleter   { deleterVariable = dv } -> dv == deleterValue)
+            --                                        deleters
+            --      case matchingValues of
+            --        [] ->  return (Left (GettingReferenceToUnownedValue xobj))
+            --        [_] -> return (Right xobj)
+            --        _ -> error "Too many variables with the same name in set."
+
             --RefTy r (Just x) ->
               --error ("What to do with lifetime variable here: " ++ show x) -- | TODO!
             _ -> return (Right xobj)
@@ -1127,14 +1128,6 @@ manageMemory typeEnv globalEnv root =
                Left e -> return (Left e)
                Right _ -> do manage to --(trace ("Transfered from " ++ getName from ++ " '" ++ varOfXObj from ++ "' to " ++ getName to ++ " '" ++ varOfXObj to ++ "'") to)
                              return (Right ())
-
-        varOfXObj :: XObj -> String
-        varOfXObj xobj =
-          case xobj of
-            XObj (Sym path _) _ _ -> pathToC path
-            _ -> case info xobj of
-                   Just i -> freshVar i
-                   Nothing -> error ("Missing info on " ++ show xobj)
 
 suffixTyVars :: String -> Ty -> Ty
 suffixTyVars suffix t =

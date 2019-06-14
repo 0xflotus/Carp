@@ -10,6 +10,7 @@ module Types ( TypeMappings
              , replaceTyVars
              , mangle
              , pathToC
+             , UnificationStrategy(..)
              , areUnifiable
              , typesDeleterFunctionType
              , typesCopyFunctionType
@@ -237,44 +238,53 @@ unifySignatures v t = Map.fromList (unify v t)
         unify a b | a == b    = []
                   | otherwise = [] -- error ("Can't unify " ++ show a ++ " with " ++ show b)
 
+-- | TODO: It seems as if the only strategy needed might be 'UnificationIgnoresLifetimes' ?!
+data UnificationStrategy = UnifyEverything | UnificationIgnoresLifetimes
+
 -- | Checks if two types will unify
-areUnifiable :: Ty -> Ty -> Bool
-areUnifiable (VarTy _) (VarTy _) = True
-areUnifiable (VarTy _) _ = True
-areUnifiable _ (VarTy _) = True
-areUnifiable (StructTy a aArgs) (StructTy b bArgs)
+areUnifiable :: UnificationStrategy -> Ty -> Ty -> Bool
+areUnifiable _ (VarTy _) (VarTy _) = True
+areUnifiable _ (VarTy _) _ = True
+areUnifiable _ _ (VarTy _) = True
+areUnifiable s (StructTy a aArgs) (StructTy b bArgs)
   | length aArgs /= length bArgs = False
-  | a == b = let argBools = zipWith areUnifiable aArgs bArgs
+  | a == b = let argBools = zipWith (areUnifiable s) aArgs bArgs
              in  all (== True) argBools
   | otherwise = False
-areUnifiable (StructTy _ _) _ = False
-areUnifiable (PointerTy a) (PointerTy b) = areUnifiable a b
-areUnifiable (PointerTy _) _ = False
-areUnifiable (RefTy a ltA) (RefTy b ltB) = areUnifiable a b && case (ltA, ltB) of
-                                                                 (Just ltvA, Just ltvB) -> areUnifiable ltvA ltvB
-                                                                 (Nothing, Nothing) -> True
-                                                                 _ -> True -- TODO: Is this correct?!
-areUnifiable (RefTy _ _) _ = False
-areUnifiable (FuncTy argTysA retTyA) (FuncTy argTysB retTyB)
+areUnifiable _ (StructTy _ _) _ = False
+areUnifiable s (PointerTy a) (PointerTy b) = areUnifiable s a b
+areUnifiable _ (PointerTy _) _ = False
+areUnifiable s@UnifyEverything (RefTy a ltA) (RefTy b ltB) =
+  areUnifiable s a b && case (ltA, ltB) of
+                          (Just ltvA, Just ltvB) -> areUnifiable s ltvA ltvB
+                          (Nothing, Nothing) -> True
+                          _ -> True -- TODO: Is this correct?!
+areUnifiable s@UnificationIgnoresLifetimes (RefTy a _) (RefTy b _) =
+  areUnifiable s a b
+areUnifiable _ (RefTy _ _) _ = False
+areUnifiable s (FuncTy argTysA retTyA) (FuncTy argTysB retTyB)
   | length argTysA /= length argTysB = False
-  | otherwise = let argBools = zipWith areUnifiable argTysA argTysB
-                    retBool = areUnifiable retTyA retTyB
+  | otherwise = let argBools = zipWith (areUnifiable s) argTysA argTysB
+                    retBool = (areUnifiable s) retTyA retTyB
                 in  all (== True) (retBool : argBools)
-areUnifiable (FuncTy _ _) _ = False
-areUnifiable a b | a == b    = True
+areUnifiable _ (FuncTy _ _) _ = False
+areUnifiable _ a b | a == b    = True
           | otherwise = False
 
 -- | Put concrete types into the places where there are type variables.
 --   For example (Fn [a] b) => (Fn [Int] Bool)
 --   NOTE: If a concrete type can't be found, the type variable will stay the same.
-replaceTyVars :: TypeMappings -> Ty -> Ty
-replaceTyVars mappings t =
+replaceTyVars :: UnificationStrategy -> TypeMappings -> Ty -> Ty
+replaceTyVars strategy mappings t =
   case t of
     (VarTy key) -> fromMaybe t (Map.lookup key mappings)
-    (FuncTy argTys retTy) -> FuncTy (map (replaceTyVars mappings) argTys) (replaceTyVars mappings retTy)
-    (StructTy name tyArgs) -> StructTy name (fmap (replaceTyVars mappings) tyArgs)
-    (PointerTy x) -> PointerTy (replaceTyVars mappings x)
-    (RefTy x y) -> RefTy (replaceTyVars mappings x) (fmap (replaceTyVars mappings) y)
+    (FuncTy argTys retTy) -> FuncTy (map (replaceTyVars strategy mappings) argTys) (replaceTyVars strategy mappings retTy)
+    (StructTy name tyArgs) -> StructTy name (fmap (replaceTyVars strategy mappings) tyArgs)
+    (PointerTy x) -> PointerTy (replaceTyVars strategy mappings x)
+    (RefTy x y) ->
+      case strategy of
+        UnifyEverything -> RefTy (replaceTyVars strategy mappings x) (fmap (replaceTyVars strategy mappings) y)
+        UnificationIgnoresLifetimes -> RefTy (replaceTyVars strategy mappings x) y
     _ -> t
 
 -- | The type of a type's copying function.

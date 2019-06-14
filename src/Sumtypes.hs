@@ -49,7 +49,7 @@ replaceGenericTypesOnCases :: TypeMappings -> [SumtypeCase] -> [SumtypeCase]
 replaceGenericTypesOnCases mappings cases =
   map replaceOnCase cases
   where replaceOnCase theCase =
-          let newTys = map (replaceTyVars mappings) (caseTys theCase)
+          let newTys = map (replaceTyVars UnificationIgnoresLifetimes mappings) (caseTys theCase)
           in  theCase { caseTys = newTys }
 
 initers :: [String] -> Ty -> [SumtypeCase] -> Either TypeError [(String, Binder)]
@@ -70,7 +70,7 @@ concreteCaseInit allocationMode insidePath structTy sumtypeCase =
           (FuncTy (caseTys sumtypeCase) (VarTy "p"))
           (\(FuncTy _ concreteStructTy) ->
              let mappings = unifySignatures structTy concreteStructTy
-                 correctedTys = map (replaceTyVars mappings) (caseTys sumtypeCase)
+                 correctedTys = map (replaceTyVars UnificationIgnoresLifetimes mappings) (caseTys sumtypeCase)
              in  (toTemplate $ "$p $NAME(" ++ joinWithComma (zipWith (curry memberArg) anonMemberNames correctedTys) ++ ")"))
           (const (tokensForCaseInit allocationMode structTy sumtypeCase))
           (\(FuncTy _ _) -> [])

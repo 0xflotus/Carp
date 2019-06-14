@@ -40,10 +40,21 @@
 ;; (load "String.carp")
 
 ;; The most basic use of lifetimes:
-(defn main []
-  (let [s @"Yo"
-        r &s]
-    (do
-      (String.delete @&s)
-      (IO.println r))
-    ))
+;; (defn main []
+;;   (let [s @"Yo"
+;;         r &s]
+;;     (do
+;;       (String.delete s)
+;;       (IO.println r))
+;;     ))
+
+;; (defn f []
+;;   (let [xs [1 2 3]
+;;         r &xs
+;;         r2 r]
+;;     (do
+;;       ;;(Array.delete xs)
+;;       (Array.aset! r2 0 1000))))
+
+(defn g [xs x]
+  (Array.aset! xs 0 x))

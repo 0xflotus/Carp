@@ -66,7 +66,7 @@ concretizeTypesInToken mappings cName decl token =
   case token of
     TokDecl -> concatMap (concretizeTypesInToken mappings cName (error "Nope.")) decl
     TokName -> [TokC cName]
-    TokTy t mode -> [TokTy (replaceTyVars mappings t) mode]
+    TokTy t mode -> [TokTy (replaceTyVars UnificationIgnoresLifetimes mappings t) mode]
     _ -> [token]
 
 -- | The code needed to correctly call a lambda from C.
