@@ -42,5 +42,5 @@
         r &s]
     (do
       (delete s)
-      (println* r))
+      (IO.println r))
     ))
