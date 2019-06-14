@@ -362,9 +362,7 @@ joinedMachineReadableErrorStrings fppl err = joinWith "\n\n" (machineReadableErr
 recursiveLookupTy :: TypeMappings -> Ty -> Ty
 recursiveLookupTy mappings t = case t of
                                  (VarTy v) -> fromMaybe t (recursiveLookup mappings v)
-                                 (RefTy r lt) -> RefTy (recursiveLookupTy mappings r) lifetime
-                                   where lifetime = case lt of
-                                                      LifetimeVar v -> LifetimeVar (recursiveLookupTy mappings v)
+                                 (RefTy r lt) -> RefTy (recursiveLookupTy mappings r) (fmap (recursiveLookupTy mappings) lt)
                                  (PointerTy p) -> PointerTy (recursiveLookupTy mappings p)
                                  (StructTy n innerTys) -> StructTy n (map (recursiveLookupTy mappings) innerTys)
                                  (FuncTy argTys retTy) -> FuncTy (map (recursiveLookupTy mappings) argTys)

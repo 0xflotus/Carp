@@ -54,8 +54,9 @@ renameVarTys rootType = do n <- get
 
     rename (RefTy x y) = do x' <- rename x
                             y' <- case y of
-                                    LifetimeVar v -> do v' <- (rename v)
-                                                        return (LifetimeVar v')
+                                    Just v -> do v' <- (rename v)
+                                                 return (Just v')
+                                    Nothing -> return Nothing
                             return (RefTy x' y')
 
     rename x = return x
@@ -70,9 +71,9 @@ initialTypes typeEnv rootEnv root = evalState (visit rootEnv root) 0
                        (Num t _)          -> return (Right (xobj { ty = Just t }))
                        (Bol _)            -> return (Right (xobj { ty = Just BoolTy }))
                        (Str _)            -> do lt <- genVarTy
-                                                return (Right (xobj { ty = Just (RefTy StringTy (LifetimeVar lt)) }))
+                                                return (Right (xobj { ty = Just (RefTy StringTy (Just lt)) }))
                        (Pattern _)        -> do lt <- genVarTy
-                                                return (Right (xobj { ty = Just (RefTy PatternTy (LifetimeVar lt)) }))
+                                                return (Right (xobj { ty = Just (RefTy PatternTy (Just lt)) }))
                        (Chr _)            -> return (Right (xobj { ty = Just CharTy }))
                        Break              -> return (Right (xobj { ty = Just (FuncTy [] UnitTy)}))
                        (Command _)        -> return (Right (xobj { ty = Just DynamicTy }))
@@ -322,7 +323,7 @@ initialTypes typeEnv rootEnv root = evalState (visit rootEnv root) 0
                          let Just valueTy = ty okValue
                              Just ii = info value
                              identifierName = infoIdentifier ii
-                         return (XObj (Lst [refExpr, okValue]) i (Just (RefTy valueTy (LifetimeValue (getName value)))))
+                         return (XObj (Lst [refExpr, okValue]) i (Just (RefTy valueTy (Just (LifetimeTy (getName value))))))
 
         -- Deref (error!)
         [XObj Deref _ _, value] ->

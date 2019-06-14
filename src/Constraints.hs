@@ -141,8 +141,9 @@ solveOneInternal mappings constraint =
       let (Constraint _ _ i1 i2 ctx ord) = constraint
       in do okMappings <- solveOneInternal mappings (Constraint a b i1 i2 ctx ord)
             case (ltA, ltB) of
-              (LifetimeVar ltvA, LifetimeVar ltvB) ->
+              (Just ltvA, Just ltvB) ->
                 solveOneInternal okMappings (Constraint ltvA ltvB i1 i2 ctx ord)
+              _ -> return okMappings
 
     -- Else
     Constraint aTy bTy _ _ _ _ ->

@@ -400,7 +400,8 @@ replaceGenericTypeSymbols _ xobj = xobj
 tyToXObj :: Ty -> XObj
 tyToXObj (StructTy n []) = XObj (Sym (SymPath [] n) Symbol) Nothing Nothing
 tyToXObj (StructTy n vs) = XObj (Lst (XObj (Sym (SymPath [] n) Symbol) Nothing Nothing : map tyToXObj vs)) Nothing Nothing
-tyToXObj (RefTy t (LifetimeVar v)) = XObj (Lst [XObj (Sym (SymPath [] "Ref") Symbol) Nothing Nothing, tyToXObj t, tyToXObj v]) Nothing Nothing
+tyToXObj (RefTy t (Just v)) = XObj (Lst [XObj (Sym (SymPath [] "Ref") Symbol) Nothing Nothing, tyToXObj t, tyToXObj v]) Nothing Nothing
+tyToXObj (RefTy t Nothing) = XObj (Lst [XObj (Sym (SymPath [] "Ref") Symbol) Nothing Nothing, tyToXObj t]) Nothing Nothing
 tyToXObj (PointerTy t) = XObj (Lst [XObj (Sym (SymPath [] "Ptr") Symbol) Nothing Nothing, tyToXObj t]) Nothing Nothing
 tyToXObj (FuncTy argTys returnTy) = XObj (Lst [XObj (Sym (SymPath [] "Fn") Symbol) Nothing Nothing, XObj (Arr (map tyToXObj argTys)) Nothing Nothing, tyToXObj returnTy]) Nothing Nothing
 tyToXObj x = XObj (Sym (SymPath [] (show x)) Symbol) Nothing Nothing
@@ -598,14 +599,14 @@ xobjToTy (XObj (Lst (XObj (Sym (SymPath _ "Ptr") _) _ _ : _)) _ _) =
   Nothing
 xobjToTy (XObj (Lst [XObj (Sym (SymPath _ "Ref") _) _ _, innerTy]) _ _) =
   do okInnerTy <- xobjToTy innerTy
-     return (RefTy okInnerTy (LifetimeVar (VarTy "missing-lifetime-var")))
+     return (RefTy okInnerTy (Just (VarTy "missing-lifetime-var")))
 xobjToTy (XObj (Lst [XObj (Sym (SymPath _ "Ref") _) _ _, innerTy, lifetime]) _ _) =
   do okInnerTy <- xobjToTy innerTy
      okLifetime <- xobjToTy lifetime
-     return (RefTy okInnerTy (LifetimeVar okLifetime))
+     return (RefTy okInnerTy (Just okLifetime))
 xobjToTy (XObj (Lst [XObj Ref i t, innerTy]) _ _) = -- This enables parsing of '&'
   do okInnerTy <- xobjToTy innerTy
-     return (RefTy okInnerTy (LifetimeVar (VarTy "missing-lifetime-var")))
+     return (RefTy okInnerTy (Just (VarTy "missing-lifetime-var")))
 xobjToTy (XObj (Lst (XObj (Sym (SymPath _ "Ref") _) _ _ : _)) _ _) =
   Nothing
 xobjToTy (XObj (Lst [XObj (Sym (SymPath path "╬╗") _) fi ft, XObj (Arr argTys) ai at, retTy]) i t) =

@@ -5,6 +5,7 @@ import Obj
 import Util
 import TypeError
 import Data.List (nub)
+import Data.Maybe (fromMaybe)
 import qualified Data.Map as Map
 
 import Debug.Trace
@@ -64,8 +65,8 @@ typeVariablesInOrderOfAppearance (FuncTy argTys retTy) =
   concatMap typeVariablesInOrderOfAppearance argTys ++ typeVariablesInOrderOfAppearance retTy
 typeVariablesInOrderOfAppearance (StructTy _ typeArgs) =
   concatMap typeVariablesInOrderOfAppearance typeArgs
-typeVariablesInOrderOfAppearance (RefTy innerTy (LifetimeVar v)) =
-  typeVariablesInOrderOfAppearance innerTy ++ typeVariablesInOrderOfAppearance v
+typeVariablesInOrderOfAppearance (RefTy innerTy v) =
+  typeVariablesInOrderOfAppearance innerTy ++ fromMaybe [] (fmap typeVariablesInOrderOfAppearance v)
 typeVariablesInOrderOfAppearance (PointerTy innerTy) =
   typeVariablesInOrderOfAppearance innerTy
 typeVariablesInOrderOfAppearance t@(VarTy _) =

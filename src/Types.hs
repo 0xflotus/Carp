@@ -1,6 +1,4 @@
 module Types ( TypeMappings
-             , Lifetime(..)
-             , mapOverLifetime
              , Ty(..)
              , showMaybeTy
              , tyToC
@@ -26,12 +24,6 @@ import Data.Maybe (fromMaybe)
 import Util
 --import Debug.Trace
 
-data Lifetime = LifetimeVar Ty
-              | LifetimeValue String
-              deriving (Show, Eq, Ord)
-
-mapOverLifetime f (LifetimeVar var) = LifetimeVar (f var)
-
 -- | Carp types.
 data Ty = IntTy
         | LongTy
@@ -46,7 +38,8 @@ data Ty = IntTy
         | UnitTy
         | ModuleTy
         | PointerTy Ty
-        | RefTy Ty Lifetime
+        | RefTy Ty (Maybe Ty) -- the second ty is the lifetime
+        | LifetimeTy String -- the name of the value that the lifetime is connected to
         | StructTy String [Ty] -- the name of the struct, and it's type parameters
         | TypeTy -- the type of types
         | MacroTy
@@ -81,16 +74,17 @@ instance Show Ty where
   show (StructTy s [])       = s
   show (StructTy s typeArgs) = "(" ++ s ++ " " ++ joinWithSpace (map show typeArgs) ++ ")"
   show (PointerTy p)         = "(Ptr " ++ show p ++ ")"
-  show (RefTy r lifetime)    =
-    case r of
-      PointerTy _ -> listView
-      StructTy _ _ -> listView
-      FuncTy _ _ -> listView
-      _ -> case lifetime of
-             LifetimeVar _  -> listView
-    where listView = "(Ref " ++ show r ++ lt ++ ")"
-          lt = case lifetime of
-                 LifetimeVar var  -> " " ++ (show var)
+  show (RefTy r Nothing)     = "&" ++ show r
+  show (RefTy r (Just lifetime)) = listView
+    -- case r of
+    --   PointerTy _ -> listView
+    --   StructTy _ _ -> listView
+    --   FuncTy _ _ -> listView
+    --   _ -> case lifetime of
+    --          Just lt  -> listView
+    --          Nothing -> "&" ++ show r
+    where listView = "(Ref " ++ show r ++ " " ++ show lifetime ++ ")"
+  show (LifetimeTy s)        = "(LifetimeTy \"" ++ s ++ "\")"
   show MacroTy               = "Macro"
   show DynamicTy             = "Dynamic"
 
@@ -232,7 +226,8 @@ unifySignatures v t = Map.fromList (unify v t)
         unify a@(PointerTy _) b = [] -- error ("Can't unify " ++ show a ++ " with " ++ show b)
 
         unify (RefTy a ltA) (RefTy b ltB) = unify a b ++ case (ltA, ltB) of
-                                                           (LifetimeVar ltvA, LifetimeVar ltvB) -> unify ltvA ltvB
+                                                           (Just ltvA, Just ltvB) -> unify ltvA ltvB
+                                                           _ -> []
         unify a@(RefTy _ _) b = [] -- error ("Can't unify " ++ show a ++ " with " ++ show b)
 
         unify (FuncTy argTysA retTyA) (FuncTy argTysB retTyB) = let argToks = concat (zipWith unify argTysA argTysB)
@@ -256,7 +251,9 @@ areUnifiable (StructTy _ _) _ = False
 areUnifiable (PointerTy a) (PointerTy b) = areUnifiable a b
 areUnifiable (PointerTy _) _ = False
 areUnifiable (RefTy a ltA) (RefTy b ltB) = areUnifiable a b && case (ltA, ltB) of
-                                                                 (LifetimeVar ltvA, LifetimeVar ltvB) -> areUnifiable ltvA ltvB
+                                                                 (Just ltvA, Just ltvB) -> areUnifiable ltvA ltvB
+                                                                 (Nothing, Nothing) -> True
+                                                                 _ -> True -- TODO: Is this correct?!
 areUnifiable (RefTy _ _) _ = False
 areUnifiable (FuncTy argTysA retTyA) (FuncTy argTysB retTyB)
   | length argTysA /= length argTysB = False
@@ -277,14 +274,12 @@ replaceTyVars mappings t =
     (FuncTy argTys retTy) -> FuncTy (map (replaceTyVars mappings) argTys) (replaceTyVars mappings retTy)
     (StructTy name tyArgs) -> StructTy name (fmap (replaceTyVars mappings) tyArgs)
     (PointerTy x) -> PointerTy (replaceTyVars mappings x)
-    (RefTy x y) -> RefTy (replaceTyVars mappings x) replacedLifetimes
-      where replacedLifetimes = case y of
-                                  LifetimeVar v -> LifetimeVar (replaceTyVars mappings v)
+    (RefTy x y) -> RefTy (replaceTyVars mappings x) (fmap (replaceTyVars mappings) y)
     _ -> t
 
 -- | The type of a type's copying function.
 typesCopyFunctionType :: Ty -> Ty
-typesCopyFunctionType memberType = FuncTy [RefTy memberType (LifetimeVar (VarTy "q"))] memberType
+typesCopyFunctionType memberType = FuncTy [RefTy memberType (Just (VarTy "q"))] memberType
 
 -- | The type of a type's deleter function.
 typesDeleterFunctionType :: Ty -> Ty
