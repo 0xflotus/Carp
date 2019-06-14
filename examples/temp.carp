@@ -54,19 +54,28 @@
 ;;         r2 r]
 ;;     (do
 ;;       ;;(Array.delete xs)
-;;       (Array.aset! r2 0 1000))))
+;;       (Array.aset! r2 0 1000)
+;;       xs)))
+;; (f)
 
 ;; (defn eat [s]
 ;;   ())
-
 ;; (defn g [xs x]
 ;;   (do
 ;;     ;;(eat xs)
 ;;     (Array.aset! xs 0 x)
-;;     ))
+;;     xs))
+;; (defn main []
+;;   (println* (g &[1 2 3] 1000)))
 
 (deftype Q [x String])
 
 (defmodule Q
   (defn = [a b]
     (String.= (Q.x a) (Q.x b))))
+
+(defn f [s]
+  (Q.= &(Q.init @"a") &(Q.init s)))
+
+(f @"a")
+(f @"b")

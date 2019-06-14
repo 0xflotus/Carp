@@ -15,7 +15,7 @@
 (load "String.carp")
 (load "IO.carp")
 (load "System.carp")
-;; (load "Pattern.carp")
+;;(load "Pattern.carp")
 ;; (load "Debug.carp")
 ;; (load "Format.carp")
 ;; (load "Random.carp")
