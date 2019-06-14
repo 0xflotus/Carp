@@ -28,4 +28,3 @@
   (register signal-segv Int "SIGSEGV")
   (register signal-term Int "SIGTERM")
 )
-

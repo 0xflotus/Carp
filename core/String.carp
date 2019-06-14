@@ -41,12 +41,16 @@
   (doc pad-left "Pads the left of a string with len bytes using the padding pad.")
   (defn pad-left [len pad s]
     (let [x (Int.max 0 (- len (length s)))]
-      (append &(from-chars &(Array.replicate x &pad)) s)))
+      ;;(append &(from-chars &(Array.replicate x &pad)) s)
+      @s
+      ))
 
   (doc pad-right "Pads the right of a string with len bytes using the padding pad.")
   (defn pad-right [len pad s]
     (let [x (Int.max 0 (- len (length s)))]
-      (append s &(from-chars &(Array.replicate x &pad)))))
+      @s
+      ;;(append s &(from-chars &(Array.replicate x &pad)))
+      ))
 
   (doc count-char "Returns the number of occurrences of `c` in the string `s`.")
   (defn count-char [s c]
@@ -77,11 +81,15 @@
 
   (doc starts-with? "Check if the string `s` begins with the string `sub`.")
   (defn starts-with? [s sub]
-    (= sub &(prefix-string s (length sub))))
+    ;; (= sub &(prefix-string s (length sub)))
+    false
+    )
 
   (doc ends-with? "Check if the string `s` ends with the string `sub`.")
   (defn ends-with? [s sub]
-    (= sub &(suffix-string s (- (length s) (length sub)))))
+    ;;(= sub &(suffix-string s (- (length s) (length sub))))
+    false
+    )
 
   (doc zero "The empty string.")
   (defn zero [] @"")
@@ -123,7 +131,7 @@
                  len (String.length str)]
           (when (> i 0)
             (do
-              (string-set-at! &result j &sep)
+              ;;(string-set-at! &result j &sep)
               (set! j (+ j sep-length))))
           (string-set-at! &result j str)
           (set! j (+ j len))))
@@ -155,16 +163,24 @@
   (defn str [s] (the String s))
 
   (defn = [a b]
-    (String.= &a &b))
+    ;;(String.= &a &b)
+    true
+    )
 
   (defn /= [a b]
-    (String./= &a &b))
+    ;;(String./= &a &b)
+    true
+    )
 
   (defn < [a b]
-    (String.< &a &b))
+    ;;(String.< &a &b)
+    true
+    )
 
   (defn > [a b]
-    (String.> &a &b))
+    ;;(String.> &a &b)
+    true
+    )
 
   (defn prn [s]
     (prn &(the String s)))

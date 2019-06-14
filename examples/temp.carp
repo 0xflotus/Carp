@@ -34,13 +34,16 @@
 ;;         (IO.println s-ref)) ;; Should detect that the s-ref is invalid here
 ;;     ()))
 
-
+;; (load "Macros.carp")
+;; (load "Int.carp")
+;; (load "Interfaces.carp")
+;; (load "String.carp")
 
 ;; The most basic use of lifetimes:
 (defn main []
   (let [s @"Yo"
         r &s]
     (do
-      (delete s)
+      (String.delete @&s)
       (IO.println r))
     ))

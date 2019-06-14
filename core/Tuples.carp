@@ -21,23 +21,23 @@
     (Pair.init @r1 @r2))
 
   (defn = [p1 p2]
-    (and (= (Pair.a &p1) (Pair.a &p2))
-         (= (Pair.b &p1) (Pair.b &p2))))
+    (and (= (Pair.a (the (Ref t l) p1)) (Pair.a (the (Ref t l) p2)))
+         (= (Pair.b (the (Ref t l) p1)) (Pair.b (the (Ref t l) p2)))))
 
-  (defn /= [p1 p2]
-    (not (Pair.= p1 p2)))
+  ;; (defn /= [p1 p2]
+  ;;   (not (Pair.= p1 p2)))
 
-  (defn < [p1 p2]
-    (PairRef.< &p1 &p2))
+  ;; (defn < [p1 p2]
+  ;;   (PairRef.< &p1 &p2))
 
-  (defn > [p1 p2]
-    (PairRef.> &p1 &p2))
+  ;; (defn > [p1 p2]
+  ;;   (PairRef.> &p1 &p2))
 
-  (doc reverse "reverses a `Pair` `p` such that its first member is its second member and vice versa.")
-  (defn reverse [p]
-    (Pair.init @(Pair.b p) @(Pair.a p)))
+  ;; (doc reverse "reverses a `Pair` `p` such that its first member is its second member and vice versa.")
+  ;; (defn reverse [p]
+  ;;   (Pair.init @(Pair.b p) @(Pair.a p)))
 
-  (doc zero "return default values of the type inside `Pair`")
-  (defn zero []
-      (Pair.init (zero) (zero)))
+  ;; (doc zero "return default values of the type inside `Pair`")
+  ;; (defn zero []
+  ;;     (Pair.init (zero) (zero)))
 )
