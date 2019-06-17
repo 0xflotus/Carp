@@ -145,10 +145,36 @@
 
 
 
-;; Minimal lifetimes example
-(defn main []
+;; Small lifetime example
+(defn f [arg0 arg1]
   (let [s @"VALUE"
+        s2 @"ANOTHER VALUE"
         r &s]
     (do
+      (ignore (the String arg0))
+      (ignore (the (Ref String) arg1))
       (String.delete s)
-      (IO.println r))))
+      (IO.println r)
+      (IO.println arg1))))
+
+(info f)
+
+
+;; Very minimal
+(defn g []
+  (let [s @""
+        r &s] ;; : (Ref String 's)
+    (do
+      (delete s)
+      (IO.print r)
+      )))
+
+(defn h [r] ;; r : (Ref String 'OUTSIDE-DEFN)
+  (IO.print r)) ;; should still work
+
+(defn i [s]
+  (IO.print &s))
+
+(defn j []
+  (let [r &@""]
+    (IO.print r)))
