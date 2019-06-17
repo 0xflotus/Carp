@@ -146,8 +146,7 @@ If the array is empty, returns `Nothing`")
   (defn subarray [xs start-index end-index]
     (let-do [result []]
       (for [i start-index end-index]
-        ;;(set! result (push-back result @(nth xs i)))
-        )
+        (set! result (push-back result @(nth xs i))))
       result))
 
   (doc prefix-array "gets a prefix array to `end-index`.")
@@ -250,7 +249,7 @@ This is similar to [`repeat`](#repeat), but the function `f` will be supplied wi
   (doc replicate "repeats element `e` `n` times and stores the results in an array.")
   (defn replicate [n e]
     (let-do [a (allocate n)]
-      ;;(for [i 0 n] (aset-uninitialized! &a i @e))
+      (for [i 0 n] (aset-uninitialized! &a i @e))
       a))
 
   (doc copy-map "maps over an array `a` using the function `f`.

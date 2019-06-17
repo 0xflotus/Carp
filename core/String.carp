@@ -41,16 +41,12 @@
   (doc pad-left "Pads the left of a string with len bytes using the padding pad.")
   (defn pad-left [len pad s]
     (let [x (Int.max 0 (- len (length s)))]
-      ;;(append &(from-chars &(Array.replicate x &pad)) s)
-      @s
-      ))
+      (append &(from-chars &(Array.replicate x &pad)) s)))
 
   (doc pad-right "Pads the right of a string with len bytes using the padding pad.")
   (defn pad-right [len pad s]
     (let [x (Int.max 0 (- len (length s)))]
-      @s
-      ;;(append s &(from-chars &(Array.replicate x &pad)))
-      ))
+      (append s &(from-chars &(Array.replicate x &pad)))))
 
   (doc count-char "Returns the number of occurrences of `c` in the string `s`.")
   (defn count-char [s c]
@@ -81,79 +77,75 @@
 
   (doc starts-with? "Check if the string `s` begins with the string `sub`.")
   (defn starts-with? [s sub]
-    ;; (= sub &(prefix-string s (length sub)))
-    false
-    )
+    (= "sub" &(prefix-string s (length sub))))
 
   (doc ends-with? "Check if the string `s` ends with the string `sub`.")
   (defn ends-with? [s sub]
-    ;;(= sub &(suffix-string s (- (length s) (length sub))))
-    false
-    )
+    (= "sdfsdffsf" &(suffix-string s (- (length s) (length sub)))))
 
-  (doc zero "The empty string.")
-  (defn zero [] @"")
+  ;; (doc zero "The empty string.")
+  ;; (defn zero [] @"")
 
-  (doc sum-length "Returns the sum of lengths from an array of Strings.")
-  (defn sum-length [strings]
-    (let-do [sum 0
-             lstrings (Array.length strings)]
-      (for [i 0 lstrings]
-        (set! sum (+ sum (String.length (Array.nth strings i)))))
-      sum))
+  ;; (doc sum-length "Returns the sum of lengths from an array of Strings.")
+  ;; (defn sum-length [strings]
+  ;;   (let-do [sum 0
+  ;;            lstrings (Array.length strings)]
+  ;;     (for [i 0 lstrings]
+  ;;       (set! sum (+ sum (String.length (Array.nth strings i)))))
+  ;;     sum))
 
-  (doc concat "Returns a new string which is the concatenation of the provided `strings`.")
-  (defn concat [strings]
-    ;; This is using a StringBuilder pattern to only perform one allocation and
-    ;; to only copy each of the incoming strings once.
-    ;; This currently performs wasted String.length calls, as we call it for each
-    ;; string once here and once in sum-length.
-    (let-do [j 0
-             lstrings (Array.length strings)
-             result (String.allocate (sum-length strings) \ )]
-      (for [i 0 lstrings]
-        (let-do [str (Array.nth strings i)
-                 len (String.length str)]
-          (string-set-at! &result j str)
-          (set! j (+ j len))))
-      result))
+  ;; (doc concat "Returns a new string which is the concatenation of the provided `strings`.")
+  ;; (defn concat [strings]
+  ;;   ;; This is using a StringBuilder pattern to only perform one allocation and
+  ;;   ;; to only copy each of the incoming strings once.
+  ;;   ;; This currently performs wasted String.length calls, as we call it for each
+  ;;   ;; string once here and once in sum-length.
+  ;;   (let-do [j 0
+  ;;            lstrings (Array.length strings)
+  ;;            result (String.allocate (sum-length strings) \ )]
+  ;;     (for [i 0 lstrings]
+  ;;       (let-do [str (Array.nth strings i)
+  ;;                len (String.length str)]
+  ;;         (string-set-at! &result j str)
+  ;;         (set! j (+ j len))))
+  ;;     result))
 
-  (doc join "Returns a new string which is the concatenation of the provided `strings` separated by string `sep`.")
-  (defn join [sep strings]
-    (let-do [j 0
-             lstrings (Array.length strings)
-             num-seps (- lstrings 1)
-             sep-length (String.length &sep)
-             seps-size (* num-seps sep-length)
-             result (String.allocate (+ seps-size (sum-length strings)) \ )]
-      (for [i 0 lstrings]
-        (let-do [str (Array.nth strings i)
-                 len (String.length str)]
-          (when (> i 0)
-            (do
-              ;;(string-set-at! &result j &sep)
-              (set! j (+ j sep-length))))
-          (string-set-at! &result j str)
-          (set! j (+ j len))))
-      result))
+  ;; (doc join "Returns a new string which is the concatenation of the provided `strings` separated by string `sep`.")
+  ;; (defn join [sep strings]
+  ;;   (let-do [j 0
+  ;;            lstrings (Array.length strings)
+  ;;            num-seps (- lstrings 1)
+  ;;            sep-length (String.length &sep)
+  ;;            seps-size (* num-seps sep-length)
+  ;;            result (String.allocate (+ seps-size (sum-length strings)) \ )]
+  ;;     (for [i 0 lstrings]
+  ;;       (let-do [str (Array.nth strings i)
+  ;;                len (String.length str)]
+  ;;         (when (> i 0)
+  ;;           (do
+  ;;             (string-set-at! &result j &sep)
+  ;;             (set! j (+ j sep-length))))
+  ;;         (string-set-at! &result j str)
+  ;;         (set! j (+ j len))))
+  ;;     result))
 
-  (doc join-with-char "Returns a new string which is the concatenation of the provided `strings` separated by char `sep`.")
-  (defn join-with-char [sep strings]
-    ;; (= (join-with-char \  ["Hello" "world"]) (join " " ["Hello" "world"]))
-    (let-do [j 0
-             lstrings (Array.length strings)
-             sep-length (- lstrings 1)
-             result (String.allocate (+ sep-length (sum-length strings)) \ )]
-      (for [i 0 lstrings]
-        (let-do [str (Array.nth strings i)
-                 len (String.length str)]
-          (when (> i 0)
-            (do
-              (string-set! &result j sep)
-              (set! j (+ j 1))))
-          (string-set-at! &result j str)
-          (set! j (+ j len))))
-      result))
+  ;; (doc join-with-char "Returns a new string which is the concatenation of the provided `strings` separated by char `sep`.")
+  ;; (defn join-with-char [sep strings]
+  ;;   ;; (= (join-with-char \  ["Hello" "world"]) (join " " ["Hello" "world"]))
+  ;;   (let-do [j 0
+  ;;            lstrings (Array.length strings)
+  ;;            sep-length (- lstrings 1)
+  ;;            result (String.allocate (+ sep-length (sum-length strings)) \ )]
+  ;;     (for [i 0 lstrings]
+  ;;       (let-do [str (Array.nth strings i)
+  ;;                len (String.length str)]
+  ;;         (when (> i 0)
+  ;;           (do
+  ;;             (string-set! &result j sep)
+  ;;             (set! j (+ j 1))))
+  ;;         (string-set-at! &result j str)
+  ;;         (set! j (+ j len))))
+  ;;     result))
 
   (doc contains? "Checks whether the string `s` contains the character `c`.")
   (defn contains? [s c] (> (index-of s c) -1))
@@ -163,24 +155,20 @@
   (defn str [s] (the String s))
 
   (defn = [a b]
-    ;;(String.= &a &b)
-    true
-    )
+    true)
+    ;;(String.= &a &b))
 
-  (defn /= [a b]
-    ;;(String./= &a &b)
-    true
-    )
+(defn /= [a b]
+  true)
+    ;;(String./= &a &b))
 
-  (defn < [a b]
-    ;;(String.< &a &b)
-    true
-    )
+(defn < [a b]
+  true)
+    ;;(String.< &a &b))
 
-  (defn > [a b]
-    ;;(String.> &a &b)
-    true
-    )
+(defn > [a b]
+  true)
+    ;;(String.> &a &b))
 
   (defn prn [s]
     (prn &(the String s)))

@@ -128,11 +128,13 @@ data Deleter = ProperDeleter { deleterPath :: SymPath
                              }
              | FakeDeleter { deleterVariable :: String -- used for external types with no delete function
                            }
+             | ReferencedValue { deleterVariable :: String } -- Helps the lifetime checks when passing values by reference to functions
              deriving (Eq, Ord)
 
 instance Show Deleter where
   show (ProperDeleter path var) = "(ProperDel " ++ show path ++ " " ++ show var ++ ")"
   show (FakeDeleter var) = "(FakeDel " ++ show var ++ ")"
+  show (ReferencedValue var) = "(ReferencedValue " ++ show var ++ ")"
 
 getInfo i = (infoLine i, infoColumn i, infoFile i)
 

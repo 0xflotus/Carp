@@ -660,10 +660,13 @@ manageMemory typeEnv globalEnv root =
               do MemState deleters deps <- get
                  let matchingValues = Set.toList $ Set.filter (\case
                                                    ProperDeleter { deleterVariable = dv } -> dv == deleterValue
-                                                   FakeDeleter   { deleterVariable = dv } -> dv == deleterValue)
+                                                   FakeDeleter   { deleterVariable = dv } -> dv == deleterValue
+                                                   ReferencedValue { deleterVariable = dv } -> dv == deleterValue
+                                                              )
                                                    deleters
                  case matchingValues of
-                   [] ->  return (Left (GettingReferenceToUnownedValue xobj))
+                   [] -> -- return (Left (GettingReferenceToUnownedValue xobj))
+                     return (trace ("Invalid reference detected: " ++ show xobj) (Right xobj))
                    [_] -> return (Right xobj)
                    _ -> error "Too many variables with the same name in set."
 
@@ -1053,14 +1056,17 @@ manageMemory typeEnv globalEnv root =
 
         createDeleter :: XObj -> Maybe Deleter
         createDeleter xobj =
+          let var = varOfXObj xobj in
           case ty xobj of
-            Just t -> let var = varOfXObj xobj
-                      in  if isManaged typeEnv t && not (isExternalType typeEnv t)
-                          then case nameOfPolymorphicFunction typeEnv globalEnv (FuncTy [t] UnitTy) "delete" of
-                                 Just pathOfDeleteFunc -> Just (ProperDeleter pathOfDeleteFunc var)
-                                 Nothing -> --trace ("Found no delete function for " ++ var ++ " : " ++ (showMaybeTy (ty xobj)))
-                                            Just (FakeDeleter var)
-                          else Nothing
+            Just (RefTy _ _) ->
+              Just (ReferencedValue var)
+            Just t ->
+              if isManaged typeEnv t && not (isExternalType typeEnv t)
+              then case nameOfPolymorphicFunction typeEnv globalEnv (FuncTy [t] UnitTy) "delete" of
+                     Just pathOfDeleteFunc -> Just (ProperDeleter pathOfDeleteFunc var)
+                     Nothing -> --trace ("Found no delete function for " ++ var ++ " : " ++ (showMaybeTy (ty xobj)))
+                       Just (FakeDeleter var)
+              else Nothing
             Nothing -> error ("No type, can't manage " ++ show xobj)
 
         manage :: XObj -> State MemState ()
@@ -1080,7 +1086,8 @@ manageMemory typeEnv globalEnv root =
           let var = varOfXObj xobj
           in  Set.toList $ Set.filter (\case
                                                ProperDeleter { deleterVariable = dv } -> dv == var
-                                               FakeDeleter   { deleterVariable = dv } -> dv == var)
+                                               FakeDeleter   { deleterVariable = dv } -> dv == var
+                                               ReferencedValue { deleterVariable = dv } -> dv == var)
                                       deleters
 
         isSymbolThatCaptures :: XObj -> Bool
