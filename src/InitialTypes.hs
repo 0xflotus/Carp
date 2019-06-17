@@ -319,11 +319,12 @@ initialTypes typeEnv rootEnv root = evalState (visit rootEnv root) 0
         -- Ref
         [refExpr@(XObj Ref _ _), value] ->
           do visitedValue <- visit env value
+             varTy <- genVarTy
              return $ do okValue <- visitedValue
                          let Just valueTy = ty okValue
                              Just ii = info value
                              identifierName = infoIdentifier ii
-                         return (XObj (Lst [refExpr, okValue]) i (Just (RefTy valueTy (Just (LifetimeTy (varOfXObj value))))))
+                         return (XObj (Lst [refExpr, okValue]) i (Just (RefTy valueTy (Just varTy))))
 
         -- Deref (error!)
         [XObj Deref _ _, value] ->

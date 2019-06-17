@@ -38,7 +38,7 @@ assignTypes mappings root = visit root
     assignType :: XObj -> Either TypeError XObj
     assignType xobj = case ty xobj of
       Just startingType ->
-        let finalType = replaceTyVars UnificationIgnoresLifetimes mappings startingType
+        let finalType = replaceTyVars UnifyEverything mappings startingType
         in  if isArrayTypeOK finalType
             then Right (xobj { ty = Just finalType })
             else Left  (ArraysCannotContainRefs xobj)

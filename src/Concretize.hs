@@ -251,7 +251,7 @@ concretizeXObj allowAmbiguityRoot typeEnv rootEnv visitedDefinitions root =
                                                  Just i' = i
                                        in  case solve [Constraint theType t' fake1 fake2 fake1 OrdMultiSym] of
                                              Right mappings ->
-                                               let replaced = replaceTyVars UnificationIgnoresLifetimes mappings t'
+                                               let replaced = replaceTyVars UnifyEverything mappings t'
                                                    suffixed = suffixTyVars ("_x" ++ show (infoIdentifier i')) replaced -- Make sure it gets unique type variables. TODO: Is there a better way?
                                                    normalSymbol = XObj (Sym singlePath mode) i (Just suffixed)
                                                in visitSymbol allowAmbig env --(trace ("Disambiguated " ++ pretty xobj ++ " at " ++ prettyInfoFromXObj xobj ++ " to " ++ show singlePath ++ " : " ++ show suffixed ++ ", used to be " ++ show t' ++ ", theType = " ++ show theType ++ ", mappings = " ++ show mappings))
